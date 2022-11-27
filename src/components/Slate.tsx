@@ -2,18 +2,18 @@
 import { useCallback } from 'react'
 import { Tooltip, Button, Image as AntdImage } from 'antd'
 import { Descendant, Range } from 'slate'
-import { 
-  Slate, 
-  Editable, 
-  ReactEditor, 
-  RenderLeafProps, 
+import {
+  Slate,
+  Editable,
+  ReactEditor,
+  RenderLeafProps,
   RenderElementProps,
   useSlate
 } from 'slate-react'
 import isHotkey from 'is-hotkey'
-import { 
-  userInfo, 
-  keyboardMethods, 
+import {
+  userInfo,
+  keyboardMethods,
   keyboardMethodsList
 } from '../utils/slate'
 import { voidFunction } from '../utils/common'
@@ -71,8 +71,8 @@ function SlateComponent({
 function Element(props: RenderElementProps) {
 
   const { children, attributes, element } = props
- 
-  switch(element.type) {
+
+  switch (element.type) {
     case 'cursor':
       return <Cursor {...props} />
     case 'image':
@@ -105,10 +105,13 @@ function Leaf({ children, attributes, leaf }: RenderLeafProps) {
 }
 
 // 鼠标滑过组件
-function Cursor({ children, attributes }: RenderElementProps) {
+function Cursor({ children, attributes, element }: RenderElementProps) {
+
+  const show = userInfo.id !== element.id
+
   return (
-    <Tooltip title={`${userInfo.name}正在输入`}>
-      <div {...attributes} className='element-cursor'>
+    <Tooltip title={show ? `${userInfo.name}正在输入` : ''}>
+      <div {...attributes} className={show ? 'element-cursor' : 'element-none'}>
         {children}
       </div>
     </Tooltip>
@@ -132,16 +135,16 @@ function ToolBar() {
 
   // 触发过于频繁
   const getDisabled = useCallback((item: keyboardMethodsListType) => {
-    const {selection} = editor
+    const { selection } = editor
     if (!selection) return true
     if (item.element) return !selection
     return Range.isCollapsed(selection)
   }, [editor])
 
-  const getType = useCallback((item: keyboardMethodsListType) => 
+  const getType = useCallback((item: keyboardMethodsListType) =>
     !item.element && keyboardMethods.judgeMark(editor as ReactEditor, item.type)
       ? 'primary' : 'default'
-  , [editor])
+    , [editor])
 
   return (
     <div className='df mb16'>

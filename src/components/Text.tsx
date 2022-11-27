@@ -1,14 +1,12 @@
 
 import { useSlateHook } from '../utils/slate'
 import SlateComponent from './Slate'
-import { cursorMethods, slateInfo, isMobile, userInfo } from '../utils/slate'
+import { cursorMethods, slateInfo } from '../utils/slate'
 
 function Text() {
 
   // 获取数据 \ 发送数据
-  const [editor, data, sendData] = useSlateHook({ server: false })
-
-  const show = isMobile && userInfo.id !== 1
+  const [editor, data, sendData] = useSlateHook({ server: true })
 
   return (
     <div className='mt100'>
@@ -17,8 +15,8 @@ function Text() {
         value={data}
         onChange={sendData}
         onKeyDown={() => (slateInfo.lock = true)}
-        onMouseUp={() => show && cursorMethods.addCursor(editor)}
-        onBlur={() => show && cursorMethods.removeCursor(editor)}
+        onMouseUp={() => false && cursorMethods.addCursor(editor)}
+        onBlur={() => false && cursorMethods.removeCursor(editor)}
       />
     </div>
   )

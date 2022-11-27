@@ -2,6 +2,7 @@
 const express = require('express')
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const diff = require('./diff')
 
 const app = express()
 
@@ -17,8 +18,8 @@ app.get('/getData', (req, res) => {
 })
 
 app.post('/sendData', (req, res) => {
-  data = req.body
-  res.send({ success: true })
+  data = diff(data, req.body)
+  res.send({ success: true, data })
 })
 
 app.listen(8080, () => console.log('http://localhost:8080/'))

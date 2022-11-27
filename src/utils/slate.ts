@@ -6,22 +6,25 @@ import debounce from 'lodash/debounce'
 import { createEditor, Transforms, Editor, Element as SlateElement } from 'slate'
 import { withReact, ReactEditor } from 'slate-react'
 import { withHistory } from 'slate-history'
-import { Descendant } from 'slate'
-import { 
+import { Descendant, Node } from 'slate'
+import {
   useSlateDataHookType,
   keyboardMethodsListType,
   keyboardMethodsTypeEnum,
   keyboardMethodsType,
 } from './slate.type'
 import { isImage } from './common'
+import diff from './diff'
 
-const initSlateValue = [{ children: [{ text: '' }] }]
+const initSlateValue = [{ children: [{ text: '' }] }] as Descendant[];
+
+const serverUrl = 'http://192.168.0.104:8080'
 
 // 简单区分是 mobile 还是 pc
 export const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 
-export const userInfo =  {
-  name: isMobile ? '移动端' : 'pc端',
+export const userInfo = {
+  name: isMobile ? 'pc端' : '移动端',
   id: isMobile ? 0 : 1
 }
 
@@ -55,20 +58,20 @@ const setSlateValue = (editor: ReactEditor, value: Descendant[]) => {
 // 自定义 editor
 const withCustom = (editor: ReactEditor) => {
 
-  const {isVoid, isInline, insertData} = editor
+  const { isVoid, isInline, insertData } = editor
 
   // 需要将光标置空，否则后续的文本会直接跟在后面
-  editor.isVoid = element => 
+  editor.isVoid = element =>
     ['cursor', 'image'].includes(element.type) || isVoid(element);
 
-  editor.isInline = element => 
+  editor.isInline = element =>
     element.type === 'cursor' || isInline(element)
 
   editor.insertData = data => {
     const text = data.getData('text/plain')
-    const {files} = data
+    const { files } = data
     if (files?.length > 0) {
-      for (let i = 0 ; i < files.length; i++) {
+      for (let i = 0; i < files.length; i++) {
         const file = files[i]
         const reader = new FileReader()
         const [mine] = file.type.split('/')
@@ -91,6 +94,10 @@ const withCustom = (editor: ReactEditor) => {
   return editor
 }
 
+let testData = initSlateValue
+
+export const initTestData = () => (testData = initSlateValue)
+
 // slate hook
 export const useSlateHook: useSlateDataHookType = ({ server = true }) => {
 
@@ -102,9 +109,10 @@ export const useSlateHook: useSlateDataHookType = ({ server = true }) => {
   const fetchData = () => {
     // 开启锁，说明正在输入，则不请求
     if (slateInfo.lock || !server) return
-    axios.get('http://10.20.48.127:8080/getData')
+    axios.get(`${serverUrl}/getData`)
       .then(res => {
         const { data, status } = res
+        console.log('data>>>', data)
         if (status !== 200) return
         slateInfo.lastRequestTime = Date.now()
         setSlateValue(editor, data)
@@ -114,13 +122,15 @@ export const useSlateHook: useSlateDataHookType = ({ server = true }) => {
 
   // 设置数据
   const sendData = debounce((params: Descendant[]) => {
+    // 测试，待删除
+    // testData = diff(testData, params)
+    // console.log('testData>>', testData)
     if (!server || Date.now() - slateInfo.lastRequestTime < 1000) {
       slateInfo.lock = false
       return
     }
-    axios.post('http://10.20.48.127:8080/sendData', params)
-      .then(res => {
-        if (res.status === 200) return
+    axios.post(`${serverUrl}/sendData`, params)
+      .then(() => {
         // 请求结束，关闭锁
         slateInfo.lock = false
       })
@@ -138,18 +148,18 @@ export const useSlateHook: useSlateDataHookType = ({ server = true }) => {
 
 // slate存储node结构
 export const slateNodeEnum = {
-  cursorNode: { children: [{ text: '' }], type: 'cursor' },
+  cursorNode: { children: [{ text: '' }], type: 'cursor', id: userInfo.id },
   cursorSelection: false
 }
 
 // 光标操作相关
 export const cursorMethods = {
-  
+
   // 增加光标
   addCursor(editor: ReactEditor) {
     try {
       // 获取当前鼠标落下的 Location
-      const {selection} = editor
+      const { selection } = editor
       // 说明此时是框选区域不是插入文本
       if (JSON.stringify(selection.anchor) !== JSON.stringify(selection.focus)) {
         return
@@ -161,15 +171,15 @@ export const cursorMethods = {
       // const content = Editor.string(editor, [])
       // if (!content) return
       Transforms.insertNodes(
-        editor, 
-        slateNodeEnum.cursorNode,
+        editor,
+        slateNodeEnum.cursorNode as unknown as Node,
         // 不能使用selection，因为删除后，会导致editor中数据结构变了
         // 用旧的selection会导致path不对
-        {at: editor.selection}
+        { at: editor.selection }
       )
       // 存储选区
       slateNodeEnum.cursorSelection = true
-    } catch(e) {}
+    } catch (e) { }
   },
 
   // 移除光标
@@ -188,7 +198,7 @@ export const cursorMethods = {
       // @ts-ignore
       const [node] = Editor.nodes(editor, {
         at: [],
-        match: (n: any) => 
+        match: (n: any) =>
           SlateElement.isElement(n) && n.type === 'cursor'
       })
       return node
@@ -198,11 +208,11 @@ export const cursorMethods = {
 }
 
 export const keyboardMethodsList: keyboardMethodsListType[] = [
-  {type: keyboardMethodsTypeEnum.bold, label: '加粗'},
-  {type: keyboardMethodsTypeEnum.italic, label: '倾斜'},
-  {type: keyboardMethodsTypeEnum.underline, label: '下划线'},
-  {type: keyboardMethodsTypeEnum.code, label: '代码'},
-  {type: keyboardMethodsTypeEnum.image, label: '图片', element: true},
+  { type: keyboardMethodsTypeEnum.bold, label: '加粗' },
+  { type: keyboardMethodsTypeEnum.italic, label: '倾斜' },
+  { type: keyboardMethodsTypeEnum.underline, label: '下划线' },
+  { type: keyboardMethodsTypeEnum.code, label: '代码' },
+  { type: keyboardMethodsTypeEnum.image, label: '图片', element: true },
 ]
 
 // 操作相关，如加粗、倾斜的需求
@@ -221,9 +231,9 @@ export const keyboardMethods = {
   },
   // 增加element类型
   tooleElement(editor: ReactEditor, type: keyboardMethodsType) {
-    const {selection} = editor
+    const { selection } = editor
     if (!selection) return
-    switch(type) {
+    switch (type) {
       default:
         const url = window.prompt('请输入图片路径:')
         if (!isImage(url)) return message.warning('请输入正确的图片地址')
@@ -237,13 +247,13 @@ export const keyboardMethods = {
       {
         type: 'image',
         url,
-        children: [{text: ''}]
+        children: [{ text: '' }]
       },
       // 插入文字，防止图片最后面无法加入文字
       {
-        children: [{text: ' '}]
+        children: [{ text: ' ' }]
       }
     ]
-    Transforms.insertNodes(editor, element)
+    Transforms.insertNodes(editor, element as any)
   }
 }
