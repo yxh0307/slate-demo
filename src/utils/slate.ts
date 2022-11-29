@@ -12,9 +12,9 @@ import {
   keyboardMethodsListType,
   keyboardMethodsTypeEnum,
   keyboardMethodsType,
+  keyboardTitleType
 } from './slate.type'
 import { isImage } from './common'
-// import diff from './diff'
 
 export const initSlateValue = [{ children: [{ text: '' }] }] as Descendant[];
 
@@ -26,24 +26,25 @@ export const userInfo = {
 }
 
 export const slateInfo = {
-  lock: false, // 锁，是否开启请求数据
+  lock: false, // lock, if false, not request data
+  dom: Math.ceil(Math.random() * 100)
 }
 
-// 设置 slate value
+// set slate value
 const setSlateValue = (editor: ReactEditor, value: Descendant[]) => {
   // try {
-    // 清空所有node
+    // clear all node
     Transforms.delete(editor, {
       at: {
         anchor: Editor.start(editor, []),
         focus: Editor.end(editor, []),
       }
     })
-    // 清除空的node
+    // clear empty node
     Transforms.removeNodes(editor, {
       at: [0],
     })
-    // 插入数据
+    // insert data
     Transforms.insertNodes(
       editor,
       value
@@ -51,12 +52,11 @@ const setSlateValue = (editor: ReactEditor, value: Descendant[]) => {
   // } catch (e) { }
 }
 
-// 自定义 editor
+// custom editor
 const withCustom = (editor: ReactEditor) => {
 
   const { isVoid, isInline, insertData } = editor
 
-  // 需要将光标置空，否则后续的文本会直接跟在后面
   editor.isVoid = element =>
     ['cursor', 'image'].includes(element.type) || isVoid(element);
 
@@ -71,7 +71,8 @@ const withCustom = (editor: ReactEditor) => {
         const file = files[i]
         const reader = new FileReader()
         const [mine] = file.type.split('/')
-        // 如果是图片
+        // if it is copy to text and type is image
+        // transform base64
         if (mine === 'image') {
           reader.addEventListener('load', () => {
             const url = reader.result
@@ -90,7 +91,7 @@ const withCustom = (editor: ReactEditor) => {
   return editor
 }
 
-// 测试数据
+// test data
 // let testData = initSlateValue
 
 // slate hook
@@ -100,7 +101,7 @@ export const useSlateHook: useSlateDataHookType = ({ server = true }) => {
 
   const cacheData = useRef<Descendant[]>()
 
-  // 获取用户信息
+  // get user info
   const login = () => {
     if (userInfo.id !== -1) return
     axios.post(`${serverUrl}/login`)  
@@ -112,9 +113,9 @@ export const useSlateHook: useSlateDataHookType = ({ server = true }) => {
       })
   }
 
-  // 获取数据
+  // interval to fetch date
   const fetchData = () => {
-    // 开启锁，说明正在输入，则不请求
+    // if is lock or server, not fetch data
     if (slateInfo.lock || !server) return
     axios.get(`${serverUrl}/getData`)
       .then(res => {
@@ -129,22 +130,20 @@ export const useSlateHook: useSlateDataHookType = ({ server = true }) => {
       })
   }
 
-  // 设置数据
+  // debounce to send data
   const sendData = debounce((params: Descendant[]) => {
-    // 测试，待删除
     // diff([{children: [{text: 'hello world'}]}], [{children: [{text: 'hello word ni'}]}])
     if (!server) return
     axios.post(`${serverUrl}/sendData`, params)
-      .then(() => {
-        // 请求结束，关闭锁
+      .finally(() => {
+        // if is ok, close lock
         slateInfo.lock = false
       })
   }, 1500)
 
-  // 最简单轮询
   useEffect(() => {
     if (!server) return
-    // 无优先级关系...
+    // it is no priority to execute function 
     login()
     fetchData()
     setInterval(fetchData, 3000)
@@ -156,7 +155,6 @@ export const useSlateHook: useSlateDataHookType = ({ server = true }) => {
 // 是否存在上个选区
 let cursorSelection = false
 
-// 光标操作相关
 export const cursorMethods = {
 
   // 增加光标
@@ -219,48 +217,80 @@ export const keyboardMethodsList: keyboardMethodsListType[] = [
 ]
 
 export const leftSlateComponentList: keyboardMethodsListType[] = [
-  { type: keyboardMethodsTypeEnum.image, label: '图片', element: true }
+  { type: keyboardMethodsTypeEnum.image, label: '添加图片', element: true },
+  { type: keyboardMethodsTypeEnum.firstTitle, label: '一级标签', element: true },
+  { type: keyboardMethodsTypeEnum.secondTitle, label: '二级标签', element: true },
+  { type: keyboardMethodsTypeEnum.thirdTitle, label: '三级标签', element: true },
 ]
 
-// 操作相关，如加粗、倾斜的需求
+// any slate operation, such as bold \ italic... 
 export const keyboardMethods = {
-  // 增加标记
+  // add any mark
   tooleMark(editor: ReactEditor, type: keyboardMethodsType, element?: boolean) {
     if (element) return this.tooleElement(editor, type)
     const active = this.judgeMark(editor, type)
     if (!active) Editor.addMark(editor, type, true)
     else Editor.removeMark(editor, type)
   },
-  // 判断是否已经存在标记
+  // judge editor selection does it exist type
   judgeMark(editor: ReactEditor, type: keyboardMethodsType) {
     const mark = Editor.marks(editor)
     return mark ? mark[type] === true : false
   },
-  // 增加element类型
+  // add element type
   tooleElement(editor: ReactEditor, type: keyboardMethodsType) {
     const { selection } = editor
     if (!selection) return
     switch (type) {
+      // if add title, such as h1、h2、h3...
+      case keyboardMethodsTypeEnum.firstTitle:
+      case keyboardMethodsTypeEnum.secondTitle:
+      case keyboardMethodsTypeEnum.thirdTitle:
+        this.tooleTitleElement(editor, type)
+        break
       default:
         const url = window.prompt('请输入图片路径:')
         if (!isImage(url)) return message.warning('请输入正确的图片地址')
         this.tooleImageElement(editor, url)
     }
   },
-  // 增加图片
+  // add image element
   tooleImageElement(editor: ReactEditor, url: string | ArrayBuffer) {
-    // https://sns-avatar-qc.xhscdn.com/avatar/624ad09cf49c9fb2c4006268.jpg?imageView2/2/w/80/format/webp
     const element = [
-      {
-        type: 'image',
-        url,
-        children: [{ text: '' }]
-      },
-      // 插入文字，防止图片最后面无法加入文字
-      {
-        children: [{ text: ' ' }]
-      }
+      { type: 'image', url, children: [{ text: '' }] },
+      // need to insert font, because image node can't add any text
+      { children: [{ text: ' ' }] }
     ]
     Transforms.insertNodes(editor, element as any)
+  },
+  // add title element
+  tooleTitleElement(editor: ReactEditor, type: keyboardTitleType) {
+    const element = [
+      { children: [{text: ''}], type },
+      { children: [{ text: ' ' }] }
+    ]
+    // set title node
+    Transforms.insertNodes(
+      editor, 
+      element
+    )
+    // add macro queue
+    setTimeout(this.setCurrentCursor)
+  },
+  // set current cursor position
+  setCurrentCursor() {
+    const selection = window.getSelection()
+    const range = selection.getRangeAt(0)
+    const node = range.startContainer
+    // find title Node
+    const elementNode = node.parentElement?.closest(`[data-slate-node="element"]`)
+    if (!elementNode) return
+    const titleNode = elementNode.previousSibling
+    // set range
+    range.setStart(titleNode, 0)
+    range.setEnd(titleNode, 0)
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
   }
 }

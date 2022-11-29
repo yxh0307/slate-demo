@@ -5,11 +5,11 @@ import { cursorMethods, slateInfo, initSlateValue } from '../utils/slate'
 
 function Text() {
 
-  // 获取数据 \ 发送数据
+  // get editor and send data to back-end
   const [editor, sendData] = useSlateHook({ server: false })
 
   return (
-    <div className='mt60 ml60'>
+    <div className='mt60 ml80'>
       <SlateComponent
         editor={editor}
         value={initSlateValue}

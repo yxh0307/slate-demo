@@ -8,7 +8,8 @@ type HookParams = {
 
 export type useSlateDataHookType = (params: HookParams) => [ReactEditor, (params: Descendant[]) => void]
 
-export type keyboardMethodsType = 'bold' | 'italic' | 'underline' | 'code' | 'image'
+export type keyboardTitleType = 'firstTitle' | 'secondTitle' | 'thirdTitle'
+export type keyboardMethodsType = 'bold' | 'italic' | 'underline' | 'code' | 'image' | keyboardTitleType
 export type keyboardMethodsTypeObject = {
   [K in keyboardMethodsType]: K
 }
@@ -18,7 +19,10 @@ export const enum keyboardMethodsTypeEnum {
   italic = 'italic',
   underline = 'underline',
   code = 'code',
-  image = 'image'
+  image = 'image',
+  firstTitle = 'firstTitle',
+  secondTitle = 'secondTitle',
+  thirdTitle = 'thirdTitle'
 }
 
 export type keyboardMethodsListType = {

@@ -18,6 +18,7 @@ import {
   keyboardMethods,
   keyboardMethodsList,
   leftSlateComponentList,
+  slateInfo
 } from '../utils/slate'
 import { voidFunction } from '../utils/common'
 import { keyboardMethodsTypeEnum, keyboardMethodsListType } from '../utils/slate.type'
@@ -26,6 +27,7 @@ interface SlateComponentProps {
   editor: ReactEditor;
   value: Descendant[];
   onChange?(val: Descendant[]): void;
+  id?: string;
   [props: string]: any;
 }
 
@@ -34,6 +36,7 @@ function SlateComponent({
   value,
   onChange = voidFunction,
   onKeyDown = voidFunction,
+  id,
   ...rest
 }: SlateComponentProps) {
 
@@ -41,6 +44,13 @@ function SlateComponent({
   const renderElement = useCallback((props: RenderElementProps) => <Element {...props} />, [])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const dom = document.getElementById(`slate-left-${slateInfo.dom}`)
+    const isHide = dom.style.left.slice(0, 1) === '-'
+    if (!isHide) {
+      dom.style.left = '-9999px'
+      dom.style.top = '-9999px'
+      dom.style.opacity = '0'
+    }
     onKeyDown(e)
     // 加粗
     if (isHotkey('mod+b', e)) {
@@ -65,10 +75,11 @@ function SlateComponent({
 
       <Editable
         placeholder='请输入内容'
+        {...rest}
+        id={`slate-${slateInfo.dom}`}
         onKeyDown={handleKeyDown}
         renderLeaf={renderLeaf}
         renderElement={renderElement}
-        {...rest}
       />
     </Slate>
   )
@@ -80,12 +91,16 @@ function Element(props: RenderElementProps) {
   const { children, attributes, element } = props
 
   attributes.className = 'slate-element'
-  
+
   switch (element.type) {
     case 'cursor':
       return <Cursor {...props} />
-    case 'image':
+    case keyboardMethodsTypeEnum.image:
       return <Image {...props} />
+    case keyboardMethodsTypeEnum.firstTitle:
+    case keyboardMethodsTypeEnum.secondTitle:
+    case keyboardMethodsTypeEnum.thirdTitle:
+      return <Title {...props} />
     default:
       return <div {...attributes}>{children}</div>
   }
@@ -140,6 +155,18 @@ function Image({ children, attributes, element }: RenderElementProps) {
       {children}
     </div>
   )
+}
+
+// title component
+function Title({ children, attributes, element }: RenderElementProps) {
+  switch(element.type) {
+    case keyboardMethodsTypeEnum.firstTitle:
+      return <h1 {...attributes}>{children}</h1>
+    case keyboardMethodsTypeEnum.secondTitle:
+      return <h2 {...attributes}>{children}</h2>
+    default:
+      return <h3 {...attributes}>{children}</h3>
+  }
 }
 
 // 头部 Range 样式组件
@@ -218,21 +245,22 @@ function LeftSlateComponent({editor}: {editor: ReactEditor}) {
   // 判断是否存在选中，即存在选中的selection
   const focused = useFocused()
 
-  const ref = useRef<HTMLDivElement>()
-
   useEffect(() => {
+    const dom = document.getElementById(`slate-left-${slateInfo.dom}`)
     if (!focused) {
-      ref.current.style.top = '-9999px'
-      ref.current.style.left = '-9999px'
+      dom.style.top = '-9999px'
+      dom.style.left = '-9999px'
       return
     }
     const selection = window.getSelection()
     setTimeout(() => {
-      const dom = selection.focusNode
-      const node = dom.parentElement?.closest(`[data-slate-node="element"]`)
+      const {focusNode} = selection
+      const node = focusNode.parentElement?.closest(`[data-slate-node="element"]`)
+      if (!node) return
       const {y} = node.getBoundingClientRect() || {}
-      ref.current.style.top = `${y}px`
-      ref.current.style.left = `40px`
+      dom.style.top = `${y}px`
+      dom.style.left = `56px`
+      dom.style.opacity = '1'
     })
   }, [focused])
 
@@ -241,12 +269,12 @@ function LeftSlateComponent({editor}: {editor: ReactEditor}) {
     label: (
       <Button 
         onMouseDown={() => keyboardMethods.tooleMark(editor, v.type, v.element)}
-      >增加{v.label}</Button>
+      >{v.label}</Button>
     )
   }))
 
   return (
-    <div className='left-hover' ref={ref}>
+    <div className='left-hover' id={`slate-left-${slateInfo.dom}`}>
       <Dropdown menu={{ items }} placement="bottom" arrow={{ pointAtCenter: true }}>
         <PlusCircleFilled className='pointer' />
       </Dropdown>
