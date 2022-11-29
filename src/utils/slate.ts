@@ -3,6 +3,7 @@ import { useRef, useEffect, useMemo } from 'react'
 import { message } from 'antd'
 import axios from 'axios'
 import debounce from 'lodash/debounce'
+import throttle from 'lodash/throttle'
 import { createEditor, Transforms, Editor, Element as SlateElement } from 'slate'
 import { withReact, ReactEditor } from 'slate-react'
 import { withHistory } from 'slate-history'
@@ -292,5 +293,29 @@ export const keyboardMethods = {
     range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
+  }
+}
+
+// any hover methods
+export const hoverMethods = {
+  moveElement: throttle((e: MouseEvent) => {
+    const target = e.target as Element
+    const dom = document.getElementById(`slate-left-${slateInfo.dom}`)
+    if (
+      target &&
+      target.nodeType === 1 &&
+      (target.hasAttribute('data-slate-node') || target.hasAttribute('data-slate-string'))
+    ) {
+      const {y} = target.getBoundingClientRect()
+      dom.style.top = `${y}px`
+      dom.style.left = '56px'
+      dom.style.opacity = '1'
+    }
+  }, 100),
+  leaveElement() {
+    const dom = document.getElementById(`slate-left-${slateInfo.dom}`)
+    dom.style.top = '-9999px'
+    dom.style.left = '-9999px'
+    dom.style.opacity = '0'
   }
 }

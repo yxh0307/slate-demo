@@ -9,7 +9,7 @@ function Text() {
   const [editor, sendData] = useSlateHook({ server: false })
 
   return (
-    <div className='mt60 ml80'>
+    <div className='mt60'>
       <SlateComponent
         editor={editor}
         value={initSlateValue}

@@ -18,7 +18,8 @@ import {
   keyboardMethods,
   keyboardMethodsList,
   leftSlateComponentList,
-  slateInfo
+  slateInfo,
+  hoverMethods
 } from '../utils/slate'
 import { voidFunction } from '../utils/common'
 import { keyboardMethodsTypeEnum, keyboardMethodsListType } from '../utils/slate.type'
@@ -39,6 +40,8 @@ function SlateComponent({
   id,
   ...rest
 }: SlateComponentProps) {
+
+  const ref = useRef<HTMLDivElement>()
 
   const renderLeaf = useCallback((props: RenderLeafProps) => <Leaf {...props} />, [])
   const renderElement = useCallback((props: RenderElementProps) => <Element {...props} />, [])
@@ -62,26 +65,38 @@ function SlateComponent({
     }
   }
 
-  return (
-    <Slate
-      editor={editor}
-      value={value}
-      onChange={onChange}
-    >
-      {/* 滑过顶部组件 */}
-      <RangeToolBar />
-      {/* 滑过左侧组件 */}
-      <LeftSlateComponent editor={editor} />
+  useEffect(() => {
+    const dom = ref.current
+    dom.addEventListener('mousemove', hoverMethods.moveElement)
+    dom.addEventListener('mouseleave', hoverMethods.leaveElement)
+    return () => {
+      dom.removeEventListener('mousemove', hoverMethods.moveElement)
+      dom.removeEventListener('mouseleave', hoverMethods.leaveElement)
+    }
+  }, [])
 
-      <Editable
-        placeholder='请输入内容'
-        {...rest}
-        id={`slate-${slateInfo.dom}`}
-        onKeyDown={handleKeyDown}
-        renderLeaf={renderLeaf}
-        renderElement={renderElement}
-      />
-    </Slate>
+  return (
+    <div ref={ref} className='pl80'>
+      <Slate
+        editor={editor}
+        value={value}
+        onChange={onChange}
+      >
+        {/* 滑过顶部组件 */}
+        <RangeToolBar />
+        {/* 滑过左侧组件 */}
+        <LeftSlateComponent editor={editor} />
+
+        <Editable
+          placeholder='请输入内容'
+          {...rest}
+          id={`slate-${slateInfo.dom}`}
+          onKeyDown={handleKeyDown}
+          renderLeaf={renderLeaf}
+          renderElement={renderElement}
+        />
+      </Slate>
+    </div>
   )
 }
 
@@ -228,9 +243,9 @@ function RangeToolBar() {
           disabled={getDisabled(item)}
           type={getType(item)}
           key={item.type}
-          onMouseDown={() => {
+          onMouseDown={() => 
             keyboardMethods.tooleMark(editor as ReactEditor, item.type, item.element)
-          }}
+          }
         >
           {item.label}
         </Button>
@@ -241,28 +256,6 @@ function RangeToolBar() {
 
 // 左侧滑过添加组件
 function LeftSlateComponent({editor}: {editor: ReactEditor}) {
-
-  // 判断是否存在选中，即存在选中的selection
-  const focused = useFocused()
-
-  useEffect(() => {
-    const dom = document.getElementById(`slate-left-${slateInfo.dom}`)
-    if (!focused) {
-      dom.style.top = '-9999px'
-      dom.style.left = '-9999px'
-      return
-    }
-    const selection = window.getSelection()
-    setTimeout(() => {
-      const {focusNode} = selection
-      const node = focusNode.parentElement?.closest(`[data-slate-node="element"]`)
-      if (!node) return
-      const {y} = node.getBoundingClientRect() || {}
-      dom.style.top = `${y}px`
-      dom.style.left = `56px`
-      dom.style.opacity = '1'
-    })
-  }, [focused])
 
   const items: MenuProps['items'] = leftSlateComponentList.map(v => ({
     key: v.type,
