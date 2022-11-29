@@ -6,7 +6,7 @@ type HookParams = {
     server: boolean;
 }
 
-export type useSlateDataHookType = (params: HookParams) => [ReactEditor, Descendant[], (params: Descendant[]) => void]
+export type useSlateDataHookType = (params: HookParams) => [ReactEditor, (params: Descendant[]) => void]
 
 export type keyboardMethodsType = 'bold' | 'italic' | 'underline' | 'code' | 'image'
 export type keyboardMethodsTypeObject = {

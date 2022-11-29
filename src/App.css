@@ -1,9 +1,27 @@
-.mt100 {
-  margin-top: 100px;
+
+* {
+  padding: 0;
+  margin: 0;
+}
+
+.mt60 {
+  margin-top: 60px;
+}
+
+.ml60 {
+  margin-left: 60px;
 }
 
 .df {
   display: flex;
+}
+
+.dib {
+  display: inline-block;
+}
+
+.dn {
+  display: none;
 }
 
 .mr4 {
@@ -12,6 +30,10 @@
 
 .mb16 {
   margin-bottom: 16px;
+}
+
+.pointer {
+  cursor: pointer;
 }
 
 u {
@@ -46,4 +68,23 @@ code {
   100% {
     opacity: 0
   }
+}
+
+.hover-tool {
+  padding: 8px 7px 6px;
+  position: absolute;
+  z-index: 1;
+  top: -10000px;
+  left: -10000px;
+  margin-top: -6px;
+  opacity: 0;
+  background-color: #222;
+  border-radius: 4px;
+  transition: opacity 0.75s;
+}
+
+.left-hover {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
 }

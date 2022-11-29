@@ -4,9 +4,9 @@ const diffJs = require('diff')
 // 负责合并text
 function combineText(left, right) {
   let result = ''
-  const diffTexts = diffJs.diffWords(left?.text || '', right?.text || '')
+  const diffTexts = diffJs.diffChars(left?.text || '', right?.text || '')
   for (let i = 0; i < diffTexts.length; i++) {
-    // if (diffTexts[i].removed) continue
+    if (diffTexts[i].removed) continue
     result += diffTexts[i].value
   }
   return result

@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { message } from 'antd'
 import axios from 'axios'
 import debounce from 'lodash/debounce'
@@ -14,28 +14,24 @@ import {
   keyboardMethodsType,
 } from './slate.type'
 import { isImage } from './common'
-import diff from './diff'
+// import diff from './diff'
 
-const initSlateValue = [{ children: [{ text: '' }] }] as Descendant[];
+export const initSlateValue = [{ children: [{ text: '' }] }] as Descendant[];
 
-const serverUrl = 'http://192.168.0.104:8080'
-
-// 简单区分是 mobile 还是 pc
-export const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+const serverUrl = 'http://10.20.48.127:8080'
 
 export const userInfo = {
-  name: isMobile ? 'pc端' : '移动端',
-  id: isMobile ? 0 : 1
+  name: '',
+  id: -1
 }
 
 export const slateInfo = {
-  lastRequestTime: -1, // 上次slate data请求的时间
-  lock: false // 锁，是否开启请求数据
+  lock: false, // 锁，是否开启请求数据
 }
 
 // 设置 slate value
 const setSlateValue = (editor: ReactEditor, value: Descendant[]) => {
-  try {
+  // try {
     // 清空所有node
     Transforms.delete(editor, {
       at: {
@@ -52,7 +48,7 @@ const setSlateValue = (editor: ReactEditor, value: Descendant[]) => {
       editor,
       value
     )
-  } catch (e) { }
+  // } catch (e) { }
 }
 
 // 自定义 editor
@@ -94,16 +90,27 @@ const withCustom = (editor: ReactEditor) => {
   return editor
 }
 
-let testData = initSlateValue
-
-export const initTestData = () => (testData = initSlateValue)
+// 测试数据
+// let testData = initSlateValue
 
 // slate hook
 export const useSlateHook: useSlateDataHookType = ({ server = true }) => {
 
-  const [data, setData] = useState<Descendant[]>(initSlateValue)
-
   const editor = useMemo(() => withCustom(withHistory(withReact(createEditor()))), [])
+
+  const cacheData = useRef<Descendant[]>()
+
+  // 获取用户信息
+  const login = () => {
+    if (userInfo.id !== -1) return
+    axios.post(`${serverUrl}/login`)  
+      .then(res => {
+        const {data, status} = res
+        if (status !== 200) return
+        userInfo.name = data.name
+        userInfo.id = data.id
+      })
+  }
 
   // 获取数据
   const fetchData = () => {
@@ -111,46 +118,43 @@ export const useSlateHook: useSlateDataHookType = ({ server = true }) => {
     if (slateInfo.lock || !server) return
     axios.get(`${serverUrl}/getData`)
       .then(res => {
-        const { data, status } = res
-        console.log('data>>>', data)
-        if (status !== 200) return
-        slateInfo.lastRequestTime = Date.now()
-        setSlateValue(editor, data)
-        setData(data)
+        const { data: requestData, status } = res
+        const cache = cacheData.current
+        if (
+          status !== 200 ||
+          (cache && JSON.stringify(cache) === JSON.stringify(requestData))
+        ) return
+        cacheData.current = requestData
+        setSlateValue(editor, requestData)
       })
   }
 
   // 设置数据
   const sendData = debounce((params: Descendant[]) => {
     // 测试，待删除
-    // testData = diff(testData, params)
-    // console.log('testData>>', testData)
-    if (!server || Date.now() - slateInfo.lastRequestTime < 1000) {
-      slateInfo.lock = false
-      return
-    }
+    // diff([{children: [{text: 'hello world'}]}], [{children: [{text: 'hello word ni'}]}])
+    if (!server) return
     axios.post(`${serverUrl}/sendData`, params)
       .then(() => {
         // 请求结束，关闭锁
         slateInfo.lock = false
       })
-  }, 1000)
+  }, 1500)
 
   // 最简单轮询
   useEffect(() => {
     if (!server) return
+    // 无优先级关系...
+    login()
     fetchData()
-    setInterval(fetchData, 5000)
+    setInterval(fetchData, 3000)
   }, [])
 
-  return [editor, data, sendData]
+  return [editor, sendData]
 }
 
-// slate存储node结构
-export const slateNodeEnum = {
-  cursorNode: { children: [{ text: '' }], type: 'cursor', id: userInfo.id },
-  cursorSelection: false
-}
+// 是否存在上个选区
+let cursorSelection = false
 
 // 光标操作相关
 export const cursorMethods = {
@@ -172,13 +176,13 @@ export const cursorMethods = {
       // if (!content) return
       Transforms.insertNodes(
         editor,
-        slateNodeEnum.cursorNode as unknown as Node,
+        { children: [{ text: '' }], type: 'cursor', id: userInfo.id } as Node,
         // 不能使用selection，因为删除后，会导致editor中数据结构变了
         // 用旧的selection会导致path不对
         { at: editor.selection }
       )
       // 存储选区
-      slateNodeEnum.cursorSelection = true
+      cursorSelection = true
     } catch (e) { }
   },
 
@@ -189,12 +193,12 @@ export const cursorMethods = {
     // 移除节点
     nodes && Transforms.removeNodes(editor, { at: nodes[1] })
     // 清除选区
-    slateNodeEnum.cursorSelection = false
+    cursorSelection = false
   },
 
   // 查找光标位置
   findCursorLocation(editor: ReactEditor) {
-    if (slateNodeEnum.cursorSelection) {
+    if (cursorSelection) {
       // @ts-ignore
       const [node] = Editor.nodes(editor, {
         at: [],
@@ -211,8 +215,11 @@ export const keyboardMethodsList: keyboardMethodsListType[] = [
   { type: keyboardMethodsTypeEnum.bold, label: '加粗' },
   { type: keyboardMethodsTypeEnum.italic, label: '倾斜' },
   { type: keyboardMethodsTypeEnum.underline, label: '下划线' },
-  { type: keyboardMethodsTypeEnum.code, label: '代码' },
-  { type: keyboardMethodsTypeEnum.image, label: '图片', element: true },
+  { type: keyboardMethodsTypeEnum.code, label: '代码' }
+]
+
+export const leftSlateComponentList: keyboardMethodsListType[] = [
+  { type: keyboardMethodsTypeEnum.image, label: '图片', element: true }
 ]
 
 // 操作相关，如加粗、倾斜的需求
