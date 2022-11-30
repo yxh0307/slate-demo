@@ -17,8 +17,8 @@ function Text() {
           slateInfo.lock = true
           sendData(e)
         }}
-        onMouseUp={() => false && cursorMethods.addCursor(editor)}
-        onBlur={() => false && cursorMethods.removeCursor(editor)}
+        onMouseUp={() => cursorMethods.addCursor(editor)}
+        onBlur={() => cursorMethods.removeCursor(editor)}
       />
     </div>
   )

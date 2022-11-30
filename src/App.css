@@ -81,6 +81,7 @@ code {
   background-color: #222;
   border-radius: 4px;
   transition: opacity 0.75s;
+  will-change: auto;
 }
 
 .left-hover {
@@ -89,4 +90,5 @@ code {
   left: -9999px;
   opacity: 0;
   transition: opacity 0.5s;
+  will-change: auto;
 }

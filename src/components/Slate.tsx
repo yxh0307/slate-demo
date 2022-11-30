@@ -1,5 +1,5 @@
 
-import { useCallback, useRef, useEffect } from 'react'
+import { useCallback, useRef, useEffect, useMemo } from 'react'
 import { Tooltip, Button, Image as AntdImage, Dropdown, MenuProps } from 'antd'
 import { PlusCircleFilled } from '@ant-design/icons'
 import { Descendant, Range, Editor } from 'slate'
@@ -85,7 +85,7 @@ function SlateComponent({
         {/* 滑过顶部组件 */}
         <RangeToolBar />
         {/* 滑过左侧组件 */}
-        <LeftSlateComponent editor={editor} />
+        <LeftSlateComponent />
 
         <Editable
           placeholder='请输入内容'
@@ -104,7 +104,7 @@ function SlateComponent({
 function Element(props: RenderElementProps) {
 
   const { children, attributes, element } = props
-
+  
   attributes.className = 'slate-element'
 
   switch (element.type) {
@@ -255,16 +255,21 @@ function RangeToolBar() {
 }
 
 // 左侧滑过添加组件
-function LeftSlateComponent({editor}: {editor: ReactEditor}) {
+function LeftSlateComponent() {
 
-  const items: MenuProps['items'] = leftSlateComponentList.map(v => ({
-    key: v.type,
-    label: (
-      <Button 
-        onMouseDown={() => keyboardMethods.tooleMark(editor, v.type, v.element)}
-      >{v.label}</Button>
-    )
-  }))
+  const editor = useSlate()
+
+  const items: MenuProps['items'] = useMemo(() => 
+    leftSlateComponentList.map(v => ({
+      key: v.type,
+      label: (
+        <Button 
+          onMouseDown={() => keyboardMethods.tooleMark(editor as ReactEditor, v.type, v.element)}
+          disabled={!editor.selection}
+        >{v.label}</Button>
+      )
+    }))
+  , [!!editor.selection])
 
   return (
     <div className='left-hover' id={`slate-left-${slateInfo.dom}`}>

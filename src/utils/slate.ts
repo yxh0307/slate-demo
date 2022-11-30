@@ -22,13 +22,14 @@ export const initSlateValue = [{ children: [{ text: '' }] }] as Descendant[];
 const serverUrl = 'http://10.20.48.127:8080'
 
 export const userInfo = {
-  name: '',
+  name: '用户',
   id: -1
 }
 
 export const slateInfo = {
   lock: false, // lock, if false, not request data
-  dom: Math.ceil(Math.random() * 100)
+  dom: Math.ceil(Math.random() * 100),
+  mouseDown: false
 }
 
 // set slate value
@@ -92,9 +93,6 @@ const withCustom = (editor: ReactEditor) => {
   return editor
 }
 
-// test data
-// let testData = initSlateValue
-
 // slate hook
 export const useSlateHook: useSlateDataHookType = ({ server = true }) => {
 
@@ -133,7 +131,6 @@ export const useSlateHook: useSlateDataHookType = ({ server = true }) => {
 
   // debounce to send data
   const sendData = debounce((params: Descendant[]) => {
-    // diff([{children: [{text: 'hello world'}]}], [{children: [{text: 'hello word ni'}]}])
     if (!server) return
     axios.post(`${serverUrl}/sendData`, params)
       .finally(() => {
@@ -201,8 +198,8 @@ export const cursorMethods = {
       // @ts-ignore
       const [node] = Editor.nodes(editor, {
         at: [],
-        match: (n: any) =>
-          SlateElement.isElement(n) && n.type === 'cursor'
+        match: (n: any) => 
+          SlateElement.isElement(n) && n.type === 'cursor' && n.id === userInfo.id
       })
       return node
     }

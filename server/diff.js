@@ -1,7 +1,7 @@
 
 const diffJs = require('diff')
 
-// 负责合并text
+// according to diff.js to conbine text and return text
 function combineText(left, right) {
   let result = ''
   const diffTexts = diffJs.diffChars(left?.text || '', right?.text || '')
@@ -12,7 +12,7 @@ function combineText(left, right) {
   return result
 }
 
-// 递归 left 和 right 的属性
+// recursion left and right
 function diff(result, leftList, rightList, index) {
   // 如果不是数组，则直接返回结果
   if (!Array.isArray(leftList) || !Array.isArray(rightList)) {
@@ -28,7 +28,7 @@ function diff(result, leftList, rightList, index) {
     const left = leftList[i], right = rightList[i]
     const compareItem = judgeLeftOrRight ? left : right
     // element
-    if ('children' in compareItem) {
+    if ('children' in compareItem && compareItem.type !== 'cursor') {
       // 判断是否left或者right都存在
       if (left && right) {
         result[result.length] = { ...compareItem, children: [] }
@@ -37,6 +37,12 @@ function diff(result, leftList, rightList, index) {
       } else {
         result[result.length] = { ...compareItem }
       }
+      continue
+    }
+    // cursor element, this is an empty element
+    if (compareItem.type === 'cursor') {
+      const { children } = result[index]
+      children[children.length] = { ...compareItem }
     } else {
       // text
       const { children } = result[index]
@@ -47,8 +53,4 @@ function diff(result, leftList, rightList, index) {
   return result
 }
 
-function diffSlateChildren(left, right) {
-  return diff([], left, right)
-}
-
-module.exports = diffSlateChildren
+module.exports = (left, right) => diff([], left, right)
